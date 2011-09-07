@@ -1,0 +1,9 @@
+.label writer1_params=$843
+.label irq1=$854
+.label nextpattern=$869
+.label module_exit=$83d
+.label writer=$840
+.label pattern_logic_done=$869
+.label pattern_logic=$860
+.label mainloop=$83a
+.label start=$80e

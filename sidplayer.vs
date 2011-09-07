@@ -1,0 +1,10 @@
+al C:843 .writer1_params
+al C:854 .irq1
+al C:869 .nextpattern
+al C:83d .module_exit
+al C:840 .writer
+al C:869 .pattern_logic_done
+al C:860 .pattern_logic
+al C:83a .mainloop
+al C:80e .start
+al C:80b .upstartEnd
