@@ -2,13 +2,24 @@
 
 .align $100
 
-.var framecounter = 0
-.var current_pattern = 0
+framecounter: .byte 0
+current_pattern: .byte 0
+current_pattern_pointer: .byte 0
 
-.var num_patterns = 1
+.var num_patterns = 2
 
-.var pattern_orderlist_module = List().add(writer, start)
-.var pattern_orderlist_params = List().add(writer1_params, writer1_params, writer1_params)
+demopart_jmp:
+	.byte 0
+pointer_lo:
+	.byte 0
+pointer_hi:
+	.byte 0
+
+pattern_orderlist_module:
+	.word writer, start
+
+pattern_orderlist_params:
+	.word writer1_params
 
 :BasicUpstart2(start)
 start:
@@ -33,12 +44,23 @@ start:
 			sta $d012
 			cli
 
+			lda #$4c // jmp-opcode
+			sta demopart_jmp
+
 mainloop:       
 			// render current module from current pattern order and tick
-			jmp pattern_orderlist_module.get(current_pattern)
+		
+			ldx current_pattern_pointer
+
+			lda pattern_orderlist_module,x
+			sta pointer_lo
+
+			lda pattern_orderlist_module+1,x
+			sta pointer_hi
+
+			jsr demopart_jmp
 
 module_exit:
-
 			
 			jmp mainloop // main logic loop complete
 
@@ -71,7 +93,7 @@ irq1:
 			dec $d020
 
 pattern_logic:
-			.eval framecounter++
+			inc framecounter
 
 // frame-based timing, change to goat-timing etc.
 			lda framecounter 
@@ -79,8 +101,11 @@ pattern_logic:
 			beq nextpattern
 			jmp pattern_logic_done
 nextpattern:
-			.eval current_pattern = current_pattern + 1
-			.eval framecounter = 0
+			inc current_pattern
+			inc current_pattern_pointer
+			inc current_pattern_pointer
+			lda #0
+			sta framecounter
 pattern_logic_done:
 
 			pla
