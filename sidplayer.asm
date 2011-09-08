@@ -107,6 +107,22 @@ current_line: .byte 0
 
 color_offset: .byte 0
 
+ramps:
+ramp0:
+	.byte 15,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
+
+ramp1:
+	.byte 15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,15
+
+ramp_animspeed:
+	.byte 6
+
+ramp_animcounter:
+	.byte 6
+
+ramp_counter:
+	.byte 0
+
 .var screen = $0400
 
 // line entry
@@ -269,7 +285,6 @@ update_writer:
 
 			// update line colors
 
-
 			ldy #0
 colorloop:
 			ldx #80
@@ -281,6 +296,10 @@ colorloop0:
 			pha
 			
 			lda textline_color,y
+			clc
+			adc ramp_counter
+			tax
+			lda ramps,x
 			ldx color_offset
 			sta $d800+399,x
 			pla
@@ -297,7 +316,7 @@ colorloop0:
 // 
 // line entry
 // byte ypos (0-2)
-// byte color (c64 color)
+// byte color (0 or 8)
 // word text_data
 // byte $FF text end
 //
@@ -308,17 +327,17 @@ colorloop0:
 
 writer1_params:
 			.byte 0  // ypos
-			.byte LIGHT_GREEN // color
+			.byte 0 // color
 			.text "hei rakkaat yst<v<t"  // max 20 chars
 			.byte $FF
 
 			.byte 1  // ypos
-			.byte LIGHT_BLUE // color
+			.byte 8 // color
 			.text "ja tervetuloa"
 			.byte $FF
 
 			.byte 2  // ypos
-			.byte LIGHT_GRAY // color
+			.byte 0 // color
 			.text "illan shown pariin."
 			.byte $FF
 
@@ -326,17 +345,17 @@ writer1_params:
 
 writer2_params:
 			.byte 0  // ypos
-			.byte LIGHT_BLUE // color
+			.byte 8 // color
 			.text "t<m< on trilon"  // max 20 chars
 			.byte $FF
 
 			.byte 1  // ypos
-			.byte RED // color
+			.byte 0 // color
 			.text "uusi j<nnitt<v<"
 			.byte $FF
 
 			.byte 2  // ypos
-			.byte BLUE // color
+			.byte 8 // color
 			.text "ohjelmanumero"
 			.byte $FF
 
@@ -344,17 +363,17 @@ writer2_params:
 
 writer3_params:
 			.byte 0  // ypos
-			.byte GREEN // color
+			.byte 8 // color
 			.text "nojaa taakse ja"  // max 20 chars
 			.byte $FF
 
 			.byte 1  // ypos
-			.byte LIGHT_BLUE // color
+			.byte 8 // color
 			.text "rentoudu, sill<"
 			.byte $FF
 
 			.byte 2  // ypos
-			.byte RED // color
+			.byte 8 // color
 			.text "pian aloitamme."
 			.byte $FF
 
@@ -362,17 +381,17 @@ writer3_params:
 
 writer4_params:
 			.byte 0  // ypos
-			.byte WHITE // color
+			.byte 0 // color
 			.text "t<m<n teki visy"  // max 20 chars
 			.byte $FF
 
 			.byte 1  // ypos
-			.byte BLUE // color
+			.byte 0 // color
 			.text "ja muut kummat"
 			.byte $FF
 
 			.byte 2  // ypos
-			.byte LIGHT_GRAY // color
+			.byte 0 // color
 			.text "karvaturrit."
 			.byte $FF
 
@@ -388,6 +407,27 @@ irq1:
 
 pattern_logic:
 			inc framecounter
+
+// writer logic
+
+			dec ramp_animcounter
+			lda ramp_animcounter
+			cmp #0
+			bne noreset_rampanim
+			lda ramp_animspeed
+			sta ramp_animcounter	
+			inc ramp_counter
+			lda ramp_counter
+			cmp #16
+			bne nozero_rampcounter
+
+			lda #0
+			sta ramp_counter
+
+nozero_rampcounter:
+noreset_rampanim:
+
+// end writer logic
 
 // frame-based timing, change to goat-timing etc.
 			lda framecounter 
