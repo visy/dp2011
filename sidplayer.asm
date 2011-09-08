@@ -4,6 +4,8 @@
 .var pointer_lo = $000f
 .var pointer_hi = $0010
 
+.var textpointer_lo = $0011
+.var textpointer_hi = $0012
 
 .align $100
 
@@ -14,10 +16,10 @@ current_pattern_pointer: .byte 0
 .var num_patterns = 2
 
 pattern_orderlist_module:
-			.word writer, writer, writer, loop
+			.word writer, writer, writer, writer, loop
 
 pattern_orderlist_params:
-			.word writer1_params, writer2_params, writer3_params
+			.word writer1_params, writer2_params, writer3_params, writer4_params
 
 :BasicUpstart2(start)
 start:
@@ -151,23 +153,28 @@ clearloop:
 			ldx current_pattern_pointer // get params for current pattern
 
 			lda pattern_orderlist_params,x
-			sta pointer_lo
+			sta textpointer_lo
 
 			lda pattern_orderlist_params+1,x
-			sta pointer_hi
+			sta textpointer_hi
 		
 writerloop:
-			lda pointer_lo
+			lda textpointer_lo
 			clc
 			adc text_param_bytecounter
-			sta pointer_lo // advance param bytepointer
+			sta textpointer_lo // advance param bytepointer
+			bcs writer_hiadd
+			jmp no_hiadd
+writer_hiadd:
+			inc textpointer_hi // add to hibyte of the address if overflown
+no_hiadd:
 
 			lda #0
 			sta text_param_bytecounter
 
 			// param byte 0: text ypos
 			ldy #0
-			lda (pointer_lo),y
+			lda (textpointer_lo),y
 			tax
 			
 			lda textline_offsets,x // get vertical screen offset for line ypos
@@ -179,7 +186,7 @@ writerloop:
 
 			// param byte 1: text color
 			ldy #1
-			lda (pointer_lo),y
+			lda (textpointer_lo),y
 			sta textline_color,x
 			inc text_param_bytecounter
 		
@@ -195,7 +202,7 @@ linecounter:
 			iny
 			inc text_param_bytecounter
 			inc cur_textline_len
-			lda (pointer_lo),y
+			lda (textpointer_lo),y
 			cmp #255
 			bne linecounter
 
@@ -210,7 +217,7 @@ linecounter:
 			sty textdata_offset
 printloop:
 			ldy textdata_offset
-			lda (pointer_lo),y
+			lda (textpointer_lo),y
 			tax // save char to x for lower char printing
 
 			pha
@@ -243,101 +250,15 @@ printloop:
 			inc textdata_offset
 			ldy textdata_offset
 
-			lda (pointer_lo),y
+			lda (textpointer_lo),y
 			cmp #255
 			bne printloop // more chars in string
 
-			jmp peeker
-
-// writer params
-// 
-// line entry
-// byte ypos (0-2)
-// byte color (c64 color)
-// word text_data
-// byte $FF text end
-//
-// byte $FF lines end
-// byte animspeed // update animation after how many frames? 
-
-//---------------------------------------------------------
-
-writer1_params:
-			.byte 0  // ypos
-			.byte LIGHT_GREEN // color
-			.text "hei rakkaat ystavat"  // max 20 chars
-			.byte $FF
-
-			.byte 1  // ypos
-			.byte LIGHT_BLUE // color
-			.text "ja tervetuloa"
-			.byte $FF
-
-			.byte 2  // ypos
-			.byte LIGHT_GRAY // color
-			.text "shown pariin."
-			.byte $FF
-
-			.byte $FF // end
-
-writer2_params:
-			.byte 0  // ypos
-			.byte LIGHT_BLUE // color
-			.text "tama on trilon"  // max 20 chars
-			.byte $FF
-
-			.byte 1  // ypos
-			.byte RED // color
-			.text "uusi jannittava"
-			.byte $FF
-
-			.byte 2  // ypos
-			.byte BLUE // color
-			.text "ohjelmanumero"
-			.byte $FF
-
-			.byte $FF // end
-
-writer3_params:
-			.byte 0  // ypos
-			.byte GREEN // color
-			.text "nojaa taakse ja"  // max 20 chars
-			.byte $FF
-
-			.byte 1  // ypos
-			.byte LIGHT_BLUE // color
-			.text "rentoudu"
-			.byte $FF
-
-			.byte 2  // ypos
-			.byte RED // color
-			.text "pian aloitamme."
-			.byte $FF
-
-			.byte $FF // end
-
-writer4_params:
-			.byte 0  // ypos
-			.byte WHITE // color
-			.text "taman teki visy"  // max 20 chars
-			.byte $FF
-
-			.byte 1  // ypos
-			.byte BLUE // color
-			.text "ja muut kummat"
-			.byte $FF
-
-			.byte 2  // ypos
-			.byte LIGHT_GRAY // color
-			.text "karvaturrit."
-			.byte $FF
-
-			.byte $FF // end
 peeker:
 			
 			// peek if end of this screen
 			iny
-			lda (pointer_lo),y
+			lda (textpointer_lo),y
 			cmp #255
 			beq update_writer // all lines rendered!
 			jmp writerloop	  // if not, render next line		
@@ -370,9 +291,92 @@ colorloop0:
 			cpy #3
 			bne colorloop
 
-
 			jmp module_exit
 
+// writer params
+// 
+// line entry
+// byte ypos (0-2)
+// byte color (c64 color)
+// word text_data
+// byte $FF text end
+//
+// byte $FF lines end
+// byte animspeed // update animation after how many frames? 
+
+//---------------------------------------------------------
+
+writer1_params:
+			.byte 0  // ypos
+			.byte LIGHT_GREEN // color
+			.text "hei rakkaat yst<v<t"  // max 20 chars
+			.byte $FF
+
+			.byte 1  // ypos
+			.byte LIGHT_BLUE // color
+			.text "ja tervetuloa"
+			.byte $FF
+
+			.byte 2  // ypos
+			.byte LIGHT_GRAY // color
+			.text "illan shown pariin."
+			.byte $FF
+
+			.byte $FF // end
+
+writer2_params:
+			.byte 0  // ypos
+			.byte LIGHT_BLUE // color
+			.text "t<m< on trilon"  // max 20 chars
+			.byte $FF
+
+			.byte 1  // ypos
+			.byte RED // color
+			.text "uusi j<nnitt<v<"
+			.byte $FF
+
+			.byte 2  // ypos
+			.byte BLUE // color
+			.text "ohjelmanumero"
+			.byte $FF
+
+			.byte $FF // end
+
+writer3_params:
+			.byte 0  // ypos
+			.byte GREEN // color
+			.text "nojaa taakse ja"  // max 20 chars
+			.byte $FF
+
+			.byte 1  // ypos
+			.byte LIGHT_BLUE // color
+			.text "rentoudu, sill<"
+			.byte $FF
+
+			.byte 2  // ypos
+			.byte RED // color
+			.text "pian aloitamme."
+			.byte $FF
+
+			.byte $FF // end
+
+writer4_params:
+			.byte 0  // ypos
+			.byte WHITE // color
+			.text "t<m<n teki visy"  // max 20 chars
+			.byte $FF
+
+			.byte 1  // ypos
+			.byte BLUE // color
+			.text "ja muut kummat"
+			.byte $FF
+
+			.byte 2  // ypos
+			.byte LIGHT_GRAY // color
+			.text "karvaturrit."
+			.byte $FF
+
+			.byte $FF // end
 
 
 //---------------------------------------------------------
