@@ -14,14 +14,15 @@ current_pattern_pointer: .byte 0
 .var num_patterns = 2
 
 pattern_orderlist_module:
-			.word writer, writer, writer, writer
+			.word writer, writer, writer, loop
 
 pattern_orderlist_params:
-			.word writer1_params, writer1_params, writer1_params, writer1_params
+			.word writer1_params, writer2_params, writer3_params
 
 :BasicUpstart2(start)
 start:
 
+			ldx #0
 !loop:
 			.for(var i=0; i<4; i++) {
 				lda #$20
@@ -79,6 +80,15 @@ module_exit:
 
 // -- modules ---------------------------------------------
 
+// -- loop module -----------------------------------------
+
+loop:
+	lda #0
+	sta current_pattern_pointer
+	jmp module_exit
+
+// -- writer module ---------------------------------------
+
 textline_ypos: .byte 0, 0, 0
 textline_color: .byte 0, 0, 0
 text_animspeed: .byte 0
@@ -122,6 +132,18 @@ writer:
 init_new_screen:
 
 			// --- init new writerscreen
+
+			ldx #255
+clearloop:
+			lda #$20
+			sta screen+400,x
+			dex
+			bne clearloop
+
+			lda #0
+			sta text_param_bytecounter
+			sta cur_textline_len
+			sta color_offset
 
 			lda #1
 			sta new_screen_flag
@@ -225,6 +247,92 @@ printloop:
 			cmp #255
 			bne printloop // more chars in string
 
+			jmp peeker
+
+// writer params
+// 
+// line entry
+// byte ypos (0-2)
+// byte color (c64 color)
+// word text_data
+// byte $FF text end
+//
+// byte $FF lines end
+// byte animspeed // update animation after how many frames? 
+
+//---------------------------------------------------------
+
+writer1_params:
+			.byte 0  // ypos
+			.byte LIGHT_GREEN // color
+			.text "hei rakkaat ystavat"  // max 20 chars
+			.byte $FF
+
+			.byte 1  // ypos
+			.byte LIGHT_BLUE // color
+			.text "ja tervetuloa"
+			.byte $FF
+
+			.byte 2  // ypos
+			.byte LIGHT_GRAY // color
+			.text "shown pariin."
+			.byte $FF
+
+			.byte $FF // end
+
+writer2_params:
+			.byte 0  // ypos
+			.byte LIGHT_BLUE // color
+			.text "tama on trilon"  // max 20 chars
+			.byte $FF
+
+			.byte 1  // ypos
+			.byte RED // color
+			.text "uusi jannittava"
+			.byte $FF
+
+			.byte 2  // ypos
+			.byte BLUE // color
+			.text "ohjelmanumero"
+			.byte $FF
+
+			.byte $FF // end
+
+writer3_params:
+			.byte 0  // ypos
+			.byte GREEN // color
+			.text "nojaa taakse ja"  // max 20 chars
+			.byte $FF
+
+			.byte 1  // ypos
+			.byte LIGHT_BLUE // color
+			.text "rentoudu"
+			.byte $FF
+
+			.byte 2  // ypos
+			.byte RED // color
+			.text "pian aloitamme."
+			.byte $FF
+
+			.byte $FF // end
+
+writer4_params:
+			.byte 0  // ypos
+			.byte WHITE // color
+			.text "taman teki visy"  // max 20 chars
+			.byte $FF
+
+			.byte 1  // ypos
+			.byte BLUE // color
+			.text "ja muut kummat"
+			.byte $FF
+
+			.byte 2  // ypos
+			.byte LIGHT_GRAY // color
+			.text "karvaturrit."
+			.byte $FF
+
+			.byte $FF // end
 peeker:
 			
 			// peek if end of this screen
@@ -261,38 +369,9 @@ colorloop0:
 			iny
 			cpy #3
 			bne colorloop
+
+
 			jmp module_exit
-
-// writer params
-// 
-// line entry
-// byte ypos (0-2)
-// byte color (c64 color)
-// word text_data
-// byte $FF text end
-//
-// byte $FF lines end
-// byte animspeed // update animation after how many frames? 
-
-//---------------------------------------------------------
-
-writer1_params:
-			.byte 0  // ypos
-			.byte LIGHT_GREEN // color
-			.text "hei rakkaat ystavat"  // max 20 chars
-			.byte $FF
-
-			.byte 1  // ypos
-			.byte LIGHT_BLUE // color
-			.text "ja tervetuloa"
-			.byte $FF
-
-			.byte 2  // ypos
-			.byte LIGHT_GRAY // color
-			.text "shown pariin."
-			.byte $FF
-
-			.byte $FF // end
 
 
 
@@ -312,11 +391,13 @@ pattern_logic:
 			beq nextpattern
 			jmp pattern_logic_done
 nextpattern:
+
 			inc current_pattern
 			inc current_pattern_pointer
 			inc current_pattern_pointer
 			lda #0
 			sta framecounter
+			sta new_screen_flag
 pattern_logic_done:
 
 			pla
